@@ -1,0 +1,10 @@
+[
+  { "product": "Apples",  "region": "North", "sales": 100, "profit": 30, "quantity": 200, "date": "2025-01-05" },
+  { "product": "Oranges", "region": "North", "sales": 120, "profit": 45, "quantity": 150, "date": "2025-01-15" },
+  { "product": "Bananas", "region": "South", "sales": 80,  "profit": 20, "quantity": 300, "date": "2025-02-05" },
+  { "product": "Apples",  "region": "South", "sales": 90,  "profit": 25, "quantity": 180, "date": "2025-02-15" },
+  { "product": "Oranges", "region": "East",  "sales": 75,  "profit": 15, "quantity": 170, "date": "2025-03-01" },
+  { "product": "Bananas", "region": "East",  "sales": 60,  "profit": 10, "quantity": 250, "date": "2025-03-10" },
+  { "product": "Apples",  "region": "West",  "sales": 110, "profit": 40, "quantity": 210, "date": "2025-04-01" },
+  { "product": "Oranges", "region": "West",  "sales": 95,  "profit": 35, "quantity": 190, "date": "2025-04-15" }
+]
