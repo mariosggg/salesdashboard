@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sales Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/crossfilter2@1.5.4/crossfilter.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dc/4.2.4/dc.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/dc/4.2.4/dc.min.css" rel="stylesheet" />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f8f9fa;
+      color: #333;
+    }
+
+    .dashboard-container {
+      padding: 1rem;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .kpi-card {
+      flex: 1;
+      min-width: 140px;
+      background: linear-gradient(135deg, #00bcd4, #009688);
+      color: white;
+      padding: 0.75rem;
+      border-radius: 6px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+      text-align: center;
+      font-size: 1rem;
+    }
+
+    .kpi-card h2 {
+      margin: 0.25rem 0 0;
+      font-size: 1.3rem;
+    }
+
+    .chart-card {
+      background: white;
+      border-radius: 8px;
+      padding: 0.75rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      min-width: 240px;
+      max-width: 400px;
+      flex: 1;
+    }
+
+    .chart-title {
+      font-weight: bold;
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+      text-align: center;
+    }
+
+    /* Center charts */
+    #bar-chart,
+    #pie-chart,
+    #scatter-chart {
+      display: flex;
+      justify-content: center;
+    }
+
+    .dc-data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .dc-data-table th,
+    .dc-data-table td {
+      border: 1px solid #ddd;
+      padding: 6px;
+    }
+
+    .dc-data-table th {
+      background: #f0f0f0;
+    }
+
+    @media (max-width: 768px) {
+      .row {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+
+    <!-- KPI Cards -->
+    <div class="row">
+      <div class="kpi-card" id="kpi1"></div>
+      <div class="kpi-card" id="kpi2"></div>
+      <div class="kpi-card" id="kpi3"></div>
+      <div class="kpi-card" id="kpi4"></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row">
+      <div class="chart-card">
+        <div class="chart-title">Sales by Product</div>
+        <div id="bar-chart"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Sales by Region</div>
+        <div id="pie-chart"></div>
+        <div id="region-legend"></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="chart-card">
+        <div class="chart-title">Sales Activity</div>
+        <div id="scatter-chart"></div>
+      </div>
+      <div class="chart-card" style="flex: 2;">
+        <div class="chart-title">Detailed Sales Data</div>
+        <div id="data-table">
+          <table class="dc-data-table"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    fetch('data.json')
+      .then(response => response.json())
+      .then(data => {
+        // Convert date strings to Date objects
+        data.forEach(d => d.date = new Date(d.date));
+  
+        // Crossfilter and dimensions/groups
+        const ndx = crossfilter(data);
+        const productDim = ndx.dimension(d => d.product);
+        const regionDim = ndx.dimension(d => d.region);
+        const dateDim = ndx.dimension(d => d.date);
+        const quantityProfitDim = ndx.dimension(d => [d.quantity, d.profit]);
+  
+        const salesByProduct = productDim.group().reduceSum(d => d.sales);
+        const salesByRegion = regionDim.group().reduceSum(d => d.sales);
+  
+        const totalSales = ndx.groupAll().reduceSum(d => d.sales).value();
+        const avgContract = Math.round(totalSales / data.length);
+        const avgQuantity = Math.round(d3.mean(data, d => d.quantity));
+        const avgDealValue = Math.round(d3.mean(data, d => d.sales + d.profit));
+        const kpiScore = 263;
+  
+        d3.select("#kpi1").html(`<div>Avg. Contract Value</div><h2>${avgContract}</h2>`);
+        d3.select("#kpi2").html(`<div>Avg. Quantity</div><h2>${avgQuantity}</h2>`);
+        d3.select("#kpi3").html(`<div>Avg. Deal Value</div><h2>${avgDealValue}</h2>`);
+        d3.select("#kpi4").html(`<div>Sales KPI</div><h2>${kpiScore}</h2>`);
+  
+        const barChart = new dc.BarChart("#bar-chart");
+        barChart
+          .width(300).height(180)
+          .dimension(productDim)
+          .group(salesByProduct)
+          .x(d3.scaleBand().domain(salesByProduct.all().map(d => d.key)))
+          .xUnits(dc.units.ordinal)
+          .gap(20)
+          .brushOn(false)
+          .elasticY(true)
+          .yAxisLabel("Sales")
+          .margins({ top: 10, right: 20, bottom: 40, left: 40 });
+  
+        const pieChart = new dc.PieChart("#pie-chart");
+        pieChart
+          .width(300).height(200)
+          .dimension(regionDim)
+          .group(salesByRegion)
+          .innerRadius(30)
+          .renderLabel(false)
+          .renderTitle(true)
+          .legend(dc.legend().x(0).y(5).gap(5).itemHeight(12).horizontal(false))
+          .externalLabels(20)
+          .externalRadiusPadding(10)
+          .on('pretransition', chart => {
+            chart.selectAll('text.pie-slice').attr('transform', null);
+          });
+  
+        const scatterChart = new dc.ScatterPlot("#scatter-chart");
+        scatterChart
+          .width(300).height(180)
+          .x(d3.scaleLinear().domain([0, d3.max(data, d => d.quantity) + 50]))
+          .y(d3.scaleLinear().domain([0, d3.max(data, d => d.profit) + 10]))
+          .dimension(quantityProfitDim)
+          .group(quantityProfitDim.group())
+          .symbolSize(6)
+          .excludedOpacity(0.5)
+          .keyAccessor(d => d.key[0])
+          .valueAccessor(d => d.key[1])
+          .xAxisLabel("Quantity")
+          .yAxisLabel("Profit")
+          .renderHorizontalGridLines(true)
+          .renderVerticalGridLines(true);
+  
+        const formatDate = d3.timeFormat("%b %d, %Y");
+  
+        const dataTable = new dc.DataTable(".dc-data-table");
+        dataTable
+          .dimension(productDim)
+          .group(d => d.product)
+          .columns([
+            { label: "Product", format: d => d.product },
+            { label: "Region", format: d => d.region },
+            { label: "Sales", format: d => d.sales },
+            { label: "Date", format: d => formatDate(d.date) }
+          ])
+          .sortBy(d => d.sales)
+          .order(d3.descending)
+          .size(50)
+          .showGroups(false);
+  
+        dc.renderAll();
+      })
+      .catch(error => console.error('Error loading data:', error));
+  </script>
+</body>
+</html>
